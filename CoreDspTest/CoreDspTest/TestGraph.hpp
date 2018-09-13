@@ -40,8 +40,6 @@ struct Graph : GraphBase {
     }
   }
   
-  WireSpec getInputWireSpec(unsigned int idx) override { return wireSpec; }
-  WireSpec getOutputWireSpec(unsigned int idx) override { return wireSpec; }
-  bool updateWireSpecs() override { return false; }
+  bool UpdateWireSpecs() override { return false; }
 
 };

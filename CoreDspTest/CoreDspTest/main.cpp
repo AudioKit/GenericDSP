@@ -25,7 +25,7 @@ int main() {
   int i;
   for (i = 0; i + bufSiz <= nSamples; i += bufSiz) {
     copy(&inSamps[0][i], &inSamps[0][i] + bufSiz, iBufs[0]);
-    graph.process();
+    graph.Process();
     copy(oBufs[0], oBufs[0] + bufSiz, &outSamps[0][i]);
   }
   
