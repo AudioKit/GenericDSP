@@ -36,25 +36,25 @@ namespace DspBlocks {
     WireSpec() { }
 
     WireSpec(int nChannels, float sampleRate, int bufSize) {
-      init(nChannels, sampleRate, bufSize);
+      Init(nChannels, sampleRate, bufSize);
     }
 
-    void init(int nChannels, float sampleRate, int bufSize) {
+    void Init(int nChannels, float sampleRate, int bufSize) {
       this->nChannels = nChannels;
       this->sampleRate = sampleRate;
       this->bufSize = bufSize;
     }
 
-    bool isEmpty() {
+    bool IsEmpty() {
       return (nChannels == 0);
     }
 
     void Set(WireSpec ws) {
       if (*this == ws) return;
-      if (!isEmpty()) {
+      if (!IsEmpty()) {
         throw new DspError("Can't set wirespec which is not empty and doesn't match");
       } else {
-        init(ws.nChannels, ws.sampleRate, ws.bufSize);
+        Init(ws.nChannels, ws.sampleRate, ws.bufSize);
       }
     }
 
@@ -88,15 +88,13 @@ namespace DspBlocks {
   struct OutputPin;
 
   struct DspInterface {
-    virtual vector<InputPin>& getInputPins() = 0;
-    virtual vector<OutputPin>& getOutputPins() = 0;
-    virtual WireSpec getInputWireSpec(uint pinIdx) = 0;
-    virtual WireSpec getOutputWireSpec(uint pinIdx) = 0;
-    virtual bool updateWireSpecs() = 0;
-    virtual void init() = 0;
-    virtual void process() = 0;
-    virtual const char* getClassName() = 0;
-    virtual const char* getInstanceName() = 0;
+    virtual vector<InputPin>& GetInputPins() = 0;
+    virtual vector<OutputPin>& GetOutputPins() = 0;
+    virtual bool UpdateWireSpecs() = 0;
+    virtual void Init() = 0;
+    virtual void Process() = 0;
+    virtual const char* GetClassName() = 0;
+    virtual const char* GetInstanceName() = 0;
     virtual bool IsPort() { return false; }
   };
 
@@ -112,20 +110,19 @@ namespace DspBlocks {
 
     bool IsEmpty() { return (block == nullptr); }
 
-    InputPin& GetInputPin() { return block->getInputPins()[pinIdx]; }
-    OutputPin& GetOutputPin() { return block->getOutputPins()[pinIdx]; }
+    InputPin& GetInputPin() { return block->GetInputPins()[pinIdx]; }
+    OutputPin& GetOutputPin() { return block->GetOutputPins()[pinIdx]; }
 
   };
 
   struct Pin {
-    // Connection* connection = nullptr;
     WireSpec wireSpec;
     float** buffers;
     int bufferId = -1;
     char* name = (char*) "";
 
     void SetWireSpec(WireSpec& ws) {
-      if (wireSpec.isEmpty()) {
+      if (wireSpec.IsEmpty()) {
         wireSpec = ws;
       } else if (ws != wireSpec) {
         throw new DspError("conflicting wire specs");
@@ -141,7 +138,7 @@ namespace DspBlocks {
 
     void PropagateWireSpecs() {
       for (auto &dst: sinks) {
-        auto& pin = dst.block->getInputPins()[dst.pinIdx];
+        auto& pin = dst.block->GetInputPins()[dst.pinIdx];
         Pin& ref = reinterpret_cast<Pin&>(pin);
         ref.SetWireSpec(wireSpec);
       }
@@ -156,7 +153,7 @@ namespace DspBlocks {
       if (source.IsEmpty()) {
         throw new DspError("unconnected input");
       }
-      auto& pin = source.block->getOutputPins()[source.pinIdx];
+      auto& pin = source.block->GetOutputPins()[source.pinIdx];
       Pin& ref = reinterpret_cast<Pin&>(pin);
       ref.SetWireSpec(wireSpec);
     }
@@ -166,11 +163,11 @@ namespace DspBlocks {
   struct DspBase: DspInterface {
     vector<InputPin> inputPins;
     vector<OutputPin> outputPins;
-    vector<InputPin>& getInputPins() override { return inputPins; }
-    vector<OutputPin>& getOutputPins() override { return outputPins; }
+    vector<InputPin>& GetInputPins() override { return inputPins; }
+    vector<OutputPin>& GetOutputPins() override { return outputPins; }
 
-    void init() override {};
-    void process() override {};
+    void Init() override {};
+    void Process() override {};
 
     DspBase(int nInputPins, int nOutputPins) {
       inputPins = vector<InputPin>(nInputPins);
@@ -186,7 +183,7 @@ namespace DspBlocks {
       outputPins.clear();
     }
 
-    char* getInstanceName() override {
+    char* GetInstanceName() override {
       return (char *) "";
     }
 
@@ -198,13 +195,13 @@ namespace DspBlocks {
   struct DspBlockSingleWireSpec: DspBase {
     WireSpec sharedWireSpec;
 
-    bool updateWireSpecs() override {
+    bool UpdateWireSpecs() override {
 
       // first find any pins with wireSpecs, set wireSpec var
-      if (sharedWireSpec.isEmpty()) {
+      if (sharedWireSpec.IsEmpty()) {
         auto func = [&](Pin &pin) {
           auto ws = pin.wireSpec;
-          if (!ws.isEmpty() && sharedWireSpec.isEmpty()) {
+          if (!ws.IsEmpty() && sharedWireSpec.IsEmpty()) {
             sharedWireSpec = ws;
           }
         };
@@ -212,7 +209,7 @@ namespace DspBlocks {
         for (auto &pin : inputPins) { func(reinterpret_cast<Pin &>(pin)); }
       }
 
-      if (sharedWireSpec.isEmpty()) {
+      if (sharedWireSpec.IsEmpty()) {
         return false;
       }
 
@@ -221,7 +218,7 @@ namespace DspBlocks {
       auto checkPin = [&](Pin& pin) {
         auto& pinWs = pin.wireSpec;
         if (sharedWireSpec != pinWs) {
-          if (!pinWs.isEmpty()) {
+          if (!pinWs.IsEmpty()) {
             throw new DspError("Conflicting wirespecs within block");
           } else {
             pinWs = sharedWireSpec;
@@ -239,16 +236,6 @@ namespace DspBlocks {
             DspBase(nInputPins, nOutputPins) {
     }
 
-    WireSpec getInputWireSpec(uint pinIdx) override {
-      updateWireSpecs();
-      return sharedWireSpec;
-    }
-
-    WireSpec getOutputWireSpec(uint pinIdx) override {
-      updateWireSpecs();
-      return sharedWireSpec;
-    }
-
   };
 
   struct Port : DspBlockSingleWireSpec {
@@ -259,12 +246,12 @@ namespace DspBlocks {
 
   struct InputPort : InputPin, Port {
     InputPort() : Port(0,1) {}
-    const char* getClassName() override { return "Input Port"; }
+    const char* GetClassName() override { return "Input Port"; }
   };
 
   struct OutputPort : OutputPin, Port {
     OutputPort() : Port(1,0) {}
-    const char* getClassName() override { return "Output Port"; }
+    const char* GetClassName() override { return "Output Port"; }
   };
 
   struct GraphBase: DspBase {
@@ -288,13 +275,11 @@ namespace DspBlocks {
     };
 
     vector<DspInterface*> blocks;
-    //vector<Connection*> connections;
     // these two are indexed by pin number
     vector<InputPort> inputPorts;
     vector<OutputPort> outputPorts;
     // used for determining processing order
     vector<DspInterface*> sources;
-    //vector<DspInterface*> processed;
     vector<DspInterface*> processing_order;
     vector<BufferSpec>* bufferPool = nullptr;
     bool topLevel = false;
@@ -306,7 +291,7 @@ namespace DspBlocks {
       outputPorts = vector<OutputPort>(nOutputPins);
     }
 
-    const char* getClassName() override {
+    const char* GetClassName() override {
       return "Graph";
     }
 
@@ -321,15 +306,13 @@ namespace DspBlocks {
     void Connect(DspInterface* src, int srcPinIdx, DspInterface* dst, int dstPinIdx) {
       AddBlock(src);
       AddBlock(dst);
-      OutputPin& srcPin = src->getOutputPins()[srcPinIdx];
-      InputPin& dstPin = dst->getInputPins()[dstPinIdx];
+      OutputPin& srcPin = src->GetOutputPins()[srcPinIdx];
+      InputPin& dstPin = dst->GetInputPins()[dstPinIdx];
       if (!dstPin.source.IsEmpty()) {
         throw DspError("attempt to connect input pin which is already connected");
       }
-//      auto conn = new Connection(src, srcPinIdx, dst, dstPinIdx);
       srcPin.sinks.push_back(PinSpec(dst, dstPinIdx));
       dstPin.source = PinSpec(src, srcPinIdx);
-//      connections.push_back(conn);
     }
 
     void Connect(DspInterface* src, DspInterface* dst) { Connect(src, 0, dst, 0); }
@@ -341,13 +324,13 @@ namespace DspBlocks {
         AddBlock(&port);
         port.sharedWireSpec = wireSpec;
         port.topLevel = true;
-        port.updateWireSpecs();
+        port.UpdateWireSpecs();
       };
       auto& iPort = inputPorts[0];
       iPort.wireSpec = wireSpec;
       func(iPort);
       iPort.buffers = wireSpec.AllocateBuffers();
-      iPort.getOutputPins()[0].buffers = iPort.buffers;
+      iPort.GetOutputPins()[0].buffers = iPort.buffers;
       auto& oPort = outputPorts[0];
       func(oPort);
     }
@@ -371,15 +354,15 @@ namespace DspBlocks {
     /*
      For each block,
 
-     1. If the wirespec of any output pins can be set based any the input pins,
+     1. If the wirespec of any pins can be set based on any of the input pins,
      set it.
 
-     2. If the wirespec of any input pins can be set based on the output pins,
+     2. If the wirespec of any pins can be set based on any of the output pins,
      set them.
 
-     3. For each pin, follow the path through the connection to any other
-     pins, For each pin, if the wire spec is blank, set it. If not, check
-     to make sure there is no conflict and signal an error if there is one.
+     3. For each pin, follow through to any other pins, For each pin, if the
+     wire spec is blank, set it. If not, check to make sure there is no conflict
+     and signal an error if there is one.
 
      Lather rinse repeat until nothing more can be propagated or we encounter
      an error
@@ -388,17 +371,17 @@ namespace DspBlocks {
     void PropagateSignals() {
       bool did_something;
       for (auto& iPort: inputPorts) {
-        auto& pin = iPort.getOutputPins()[0];
+        auto& pin = iPort.GetOutputPins()[0];
         pin.PropagateWireSpecs();
       }
       for (auto& iPort: outputPorts) {
-        auto& pin = iPort.getInputPins()[0];
+        auto& pin = iPort.GetInputPins()[0];
         pin.PropagateWireSpecs();
       }
       do {
         did_something = false;
         for (auto& block : blocks) {
-          if (block->updateWireSpecs()) { did_something = true; }
+          if (block->UpdateWireSpecs()) { did_something = true; }
         }
       } while (did_something);
     }
@@ -423,13 +406,13 @@ namespace DspBlocks {
       sources.clear();
       for (auto &block : blocks) {
         if (block->IsPort()) {
-          auto& pins = block->getOutputPins();
+          auto& pins = block->GetOutputPins();
           if (pins.empty()) continue; // output port
           ConnectInputPinBuffers(pins[0]);
           continue;
         }
         bool isSource = true;
-        for (auto &pin : block->getInputPins()) {
+        for (auto &pin : block->GetInputPins()) {
           if (!pin.source.block->IsPort()) {
             isSource = false;
             break;
@@ -447,7 +430,7 @@ namespace DspBlocks {
     
     bool CanProcessBlock(DspInterface* block) {
       if (block->IsPort()) { return false; }
-      auto pins = block->getInputPins();
+      auto pins = block->GetInputPins();
       for (auto& pin : pins) {
         if (!HasBeenProcessed(pin.source.block)) {
           return false;
@@ -469,7 +452,7 @@ namespace DspBlocks {
     // we are at "top level", meaning the buffer was supplied by the host.
 
     void FreeInputBuffers(DspInterface* block, vector<BufferSpec>& bufferPool) {
-      for (auto pin : block->getInputPins()) {
+      for (auto pin : block->GetInputPins()) {
         if (pin.source.block->IsPort()) continue;
         auto& srcPin = pin.source.GetOutputPin();
         bool canFree = true;
@@ -506,7 +489,7 @@ namespace DspBlocks {
     // InputPin.
 
     void AllocateOutputBuffers(DspInterface* block, vector<BufferSpec>& bufferPool) {
-      for (auto& pin : block->getOutputPins()) {
+      for (auto& pin : block->GetOutputPins()) {
         bool found_buffer = false;
         auto ws = pin.wireSpec;
         for (auto &bufSpec : bufferPool) {
@@ -535,16 +518,16 @@ namespace DspBlocks {
       for (auto block: blocks) {
         OutputPort* port = dynamic_cast<OutputPort*>(block);
         if (port != nullptr) {
-          port->buffers = port->getInputPins()[0].buffers;
+          port->buffers = port->GetInputPins()[0].buffers;
         }
       }
     }
 
     /*
-     find a block which is a source. It starts the list.
+     Find a block which is a source. It starts the list.
      for each output, find what it is connected to. If we are the only input of that next block,
-     continue until we either reach a sink, or find a block with an input connection which hasn't
-     been processed yet. as we go, mark each processed connection
+     continue until we either reach a sink, or find a block with an input which hasn't
+     been processed yet. as we go, mark each processed block
      */
 
     void DetermineProcessingOrder(DspInterface* block, vector<BufferSpec>& bufferPool) {
@@ -552,7 +535,7 @@ namespace DspBlocks {
         AllocateOutputBuffers(block, bufferPool);
         MarkAsProcessed(block);
         FreeInputBuffers(block, bufferPool);
-        for (auto& pin : block->getOutputPins()) {
+        for (auto& pin : block->GetOutputPins()) {
           for (auto& sink : pin.sinks) {
             auto& nextBlock = sink.block;
             DetermineProcessingOrder(nextBlock, bufferPool);
@@ -571,22 +554,22 @@ namespace DspBlocks {
 
     void Describe() {
       for (auto block : blocks) {
-        cout << "Block: " << block->getClassName() << "\n";
+        cout << "Block: " << block->GetClassName() << "\n";
         auto func = [](WireSpec &ws) {
           cout << "    nChans: " << ws.nChannels << " ";
           cout << "SR: " << ws.sampleRate << " ";
           cout << "BufSiz: " << ws.bufSize << " ";
         };
-        if (!block->getInputPins().empty()) {
+        if (!block->GetInputPins().empty()) {
           cout << "  Inputs: \n";
-          for (auto pin: block->getInputPins()) {
+          for (auto pin: block->GetInputPins()) {
             func(pin.wireSpec);
             cout << "BufId: " << pin.bufferId << "\n";
           }
         }
-        if (!block->getOutputPins().empty()) {
+        if (!block->GetOutputPins().empty()) {
           cout << "  Outputs: \n";
-          for (auto pin: block->getOutputPins()) {
+          for (auto pin: block->GetOutputPins()) {
             func(pin.wireSpec);
             cout << "BufId: " << pin.bufferId << "\n";
           }
@@ -597,16 +580,16 @@ namespace DspBlocks {
       cout << "processing_order \n";
       cout << "\n";
       for (auto block: processing_order) {
-        cout << "Block: " << block->getClassName() << "\n";
+        cout << "Block: " << block->GetClassName() << "\n";
       }
     }
 
     void InitBlocks() {
-      for (auto& block: blocks) { block->init(); }
+      for (auto& block: blocks) { block->Init(); }
     }
 
-    void process() override {
-      for (auto& block: processing_order) { block->process(); }
+    void Process() override {
+      for (auto& block: processing_order) { block->Process(); }
     }
 
   };

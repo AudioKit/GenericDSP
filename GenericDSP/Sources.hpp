@@ -20,11 +20,11 @@ namespace DspBlocks {
       this->frequency = frequency;
     }
 
-    const char* getClassName() override { return "SineGen"; }
+    const char* GetClassName() override { return "SineGen"; }
 
-    void init() override { phase = 0; }
+    void Init() override { phase = 0; }
     
-    void process() override {
+    void Process() override {
       auto pin = outputPins[0];
       WireSpec& ws = pin.wireSpec;
       for (int samp=0; samp < ws.bufSize; samp++) {
@@ -41,9 +41,9 @@ namespace DspBlocks {
     
     Impulse() : DspBlockSingleWireSpec(0,1) {}
     
-    const char* getClassName() override { return "Impulse"; }
+    const char* GetClassName() override { return "Impulse"; }
     
-    void process() override {
+    void Process() override {
       auto pin = outputPins[0];
       WireSpec& ws = pin.wireSpec;
       memset(&pin.buffers[0][0], 0, sizeof(float) * ws.bufSize);
@@ -55,9 +55,9 @@ namespace DspBlocks {
     float **buffers = nullptr;  // copy data to this buffer during operation
     Probe() : DspBlockSingleWireSpec(1,0) {}
     
-    const char* getClassName() { return "Probe"; }
+    const char* GetClassName() { return "Probe"; }
 
-    void init() {
+    void Init() {
       freeBuffers();
       buffers = inputPins[0].wireSpec.AllocateBuffers();
     }
@@ -71,7 +71,7 @@ namespace DspBlocks {
       }
     }
 
-    void process() {
+    void Process() {
       float** pinBuf = inputPins[0].buffers;
       auto& ws = inputPins[0].wireSpec;
       for (int ch=0 ; ch < ws.nChannels; ch++) {

@@ -10,9 +10,9 @@ namespace DspBlocks {
 
     TwoInputMixer() : DspBlockSingleWireSpec(2,1) { }
 
-    const char* getClassName() override { return "Two Input Mixer"; }
+    const char* GetClassName() override { return "Two Input Mixer"; }
 
-    void process() override {
+    void Process() override {
       int nChannels = outputPins[0].wireSpec.nChannels;
       int bufSize = outputPins[0].wireSpec.bufSize;
       float** in1Bufs = inputPins[0].buffers;
