@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "DspBlocks::WireSpec::AllocateBuffers():GenericDsp.hpp">
+      </ContextState>
+      <ContextState
+         contextName = "WriteTestFile(char const*, float, unsigned int, float**, int):AudioFileIO.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "samps[ch][i]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "DspBlocks::GraphBase::TopLevelSetup(DspBlocks::WireSpec):GenericDsp.hpp">
+      </ContextState>
+      <ContextState
+         contextName = "main:main.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "(float(*)[10])*oBufs">
+            </PersistentString>
+            <PersistentString
+               value = "(float(*)[16])*iBufs">
+            </PersistentString>
+            <PersistentString
+               value = "(float (*)[16])*inSamps">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>
